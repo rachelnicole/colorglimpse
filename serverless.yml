@@ -51,21 +51,6 @@ provider:
     access_token: 
     access_token_secret: 
 
-custom:
-  datadog:
-    flushMetricsToLogs: true
-    apiKey: 
-    addLayers: true
-    logLevel: "info"
-    enableXrayTracing: true
-    enableDDTracing: true
-    forwarder: 
-    enableTags: true
-    injectLogContext: true
-
-plugins:
-  - serverless-plugin-datadog
-
 # you can add packaging information here
 #package:
 #  include:

@@ -1,17 +1,7 @@
 'use strict';
 
-const AWSXRay = require('aws-xray-sdk');
-const AWS = AWSXRay.captureAWS(require('aws-sdk'));
-
-AWSXRay.captureHTTPsGlobal(require('http'));
-AWSXRay.captureHTTPsGlobal(require('https'));
-
-// captures axios chained promises. 
-AWSXRay.capturePromise();
-
-let http = require('http');
-
-const AxiosWithXray = require('axios');
+const http = require('http');
+const axios = require('axios');
 const { createCanvas } = require('canvas')
 const canvas = createCanvas(1280, 1280);
 const ctx = canvas.getContext('2d');
@@ -62,7 +52,7 @@ let uploadToS3 = (bucketName, keyPrefix, filePath) => {
 let results;
 
 let colorGroup = () => {
-  return AxiosWithXray.get('https://www.colourlovers.com/api/palettes/random?format=json')
+  return axios.get('https://www.colourlovers.com/api/palettes/random?format=json')
     .then((response) => response.data[0])
 }
 
