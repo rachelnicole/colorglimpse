@@ -18,6 +18,5 @@
     "fs": "0.0.1-security",
     "serverless-plugin-datadog": "^2.10.1",
     "twit": "^2.2.11",
-    "uuid": "^8.3.2"
   }
 }

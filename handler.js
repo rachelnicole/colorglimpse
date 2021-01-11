@@ -1,6 +1,5 @@
 'use strict';
 
-const http = require('http');
 const axios = require('axios');
 const { createCanvas } = require('canvas')
 const canvas = createCanvas(1280, 1280);
@@ -8,7 +7,6 @@ const ctx = canvas.getContext('2d');
 const fs = require('fs');
 const path = require('path');
 const Twit = require('twit');
-const { v4: uuidv4 } = require('uuid');
 
 
 
@@ -122,7 +120,10 @@ module.exports.hello = async event => {
         });
 
         let decodedImage = canvas.toBuffer().toString('base64'),
-          fileName = uuidv4() + '.png';
+            current = new Date(),
+            todayDate = current.toLocaleString(),
+            newDateFormat = todayDate.replace(/\//g, '-'),
+            fileName = newDateFormat + '.png';
 
         let params = {
           "Body": decodedImage,
