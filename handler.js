@@ -1,5 +1,4 @@
 'use strict';
-
 const AWSXRay = require('aws-xray-sdk');
 const AWS = AWSXRay.captureAWS(require('aws-sdk'));
 
@@ -9,17 +8,14 @@ AWSXRay.captureHTTPsGlobal(require('https'));
 // captures axios chained promises. 
 AWSXRay.capturePromise();
 
-let http = require('http');
-
 const AxiosWithXray = require('axios');
+
 const { createCanvas } = require('canvas')
 const canvas = createCanvas(1280, 1280);
 const ctx = canvas.getContext('2d');
 const fs = require('fs');
 const path = require('path');
 const Twit = require('twit');
-const { v4: uuidv4 } = require('uuid');
-
 
 
 let AWS_ACCESS_KEY_ID = '';
@@ -38,6 +34,7 @@ let s3 = new AWS.S3({
   secretAccessKey: AWS_SECRET_ACCESS_KEY
 });
 
+// set up function to upload image to s3 bucket
 let uploadToS3 = (bucketName, keyPrefix, filePath) => {
   
   var fileName = path.basename(filePath);
@@ -61,15 +58,17 @@ let uploadToS3 = (bucketName, keyPrefix, filePath) => {
 
 let results;
 
+// api call to get random color palette from colourlovers.com
 let colorGroup = () => {
   return AxiosWithXray.get('https://www.colourlovers.com/api/palettes/random?format=json')
     .then((response) => response.data[0])
 }
 
 
-module.exports.hello = async event => {
+module.exports.colorglimpse = async event => {
 
-  const response = await new Promise((resolve, reject) => {
+  const tweet = await new Promise((resolve, reject) => {
+    // color lovers api call and setting response to object
     colorGroup()
       .then(data => {
         results = {
@@ -79,16 +78,14 @@ module.exports.hello = async event => {
           url: data.url
         }
 
-        console.log(data)
-        console.log(results)
 
         let width = '1280',
-          height = '1280';
+            height = '1280';
 
         // Utility function, random number between [min..max] range
         const random = (min, max) => Math.random() * (max - min) + min;
 
-        // Generate a whole bunch of circles/arcs
+        // Generate a lot of lines
         const count = 100;
         const lines = Array.from(new Array(count)).map(() => {
           return {
@@ -99,30 +96,17 @@ module.exports.hello = async event => {
           };
         });
 
+        // Setting the background image from the last hex color in the palette
         let background = "#" + results.colors.pop();
-
-        console.log(results.colors)
-        console.log(results.colors.length - 1)
-
-
-        ctx.fillStyle = 'white';
-        ctx.globalAlpha = 1;
-        ctx.fillRect(0, 0, width, height);
-
-        const side = Math.min(width, height);
-        const globalThickness = 1.5;
-
-
-        // change this one for the background
         ctx.fillStyle = background;
         ctx.globalAlpha = 1;
         ctx.fillRect(0, 0, width, height);
 
-
-        lines.forEach(circle => {
+        // Drawing each line in the line array, setting each one a different color, length, and width.
+        lines.forEach(line => {
           let randomColor = results.colors[Math.floor(random(0, results.colors.length - 1))];
 
-          // Now draw each arc
+          // Now draw each line
           ctx.strokeStyle = '#' + randomColor;
           ctx.lineWidth = random(.1, 4);
           ctx.beginPath();       // Start a new path
@@ -131,16 +115,22 @@ module.exports.hello = async event => {
           ctx.stroke();
         });
 
+        // naming image based off timestamps
         let decodedImage = canvas.toBuffer().toString('base64'),
-          fileName = uuidv4() + '.png';
+            current = new Date(),
+            todayDate = current.toLocaleString(),
+            newDateFormat = todayDate.replace(/\//g, '-'),
+            fileName = newDateFormat + '.png';
 
+        // s3 parameters
         let params = {
           "Body": decodedImage,
-          "Bucket": "colorglimpse-dev-serverlessdeploymentbucket-9wbi12jgzvez",
+          "Bucket": "",
           "Key": fileName,
           'ContentType': 'image/png',
         };
 
+        // code to upload image to s3 bucket and return response
         s3.upload(params, (err, data) => {
 
           if (err) {
@@ -151,17 +141,18 @@ module.exports.hello = async event => {
           }
         });
 
-        // first we must post the media to Twitter
+        // upload image to twitter
         T.post('media/upload', { media_data: decodedImage }, function (err, data, response) {
-          // now we can assign alt text to the media, for use by screen readers and
-          // other text-based presentations and interpreters
+          
           let mediaIdStr = data.media_id_string
+
+          // configure alt text
           let altText = results.title + ' by ' + results.author;
           let meta_params = { media_id: mediaIdStr, alt_text: { text: altText } }
 
           T.post('media/metadata/create', meta_params, function (err, data, response) {
             if (!err) {
-              // now we can reference the media and post a tweet (media will attach to the tweet)
+              // structure tweet body & attach image
               let params = { status: results.title + ' by ' + results.author + ' see palette at ' + results.url, media_ids: [mediaIdStr] }
 
               T.post('statuses/update', params, function (err, data, response) {
@@ -178,6 +169,6 @@ module.exports.hello = async event => {
       })
   })
 
-  return response
+  return tweet
 
 };
